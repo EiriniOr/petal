@@ -1,0 +1,75 @@
+import { useEffect } from 'react'
+import { AnimatePresence } from 'framer-motion'
+import { useNotesStore } from './store/notes'
+import Sidebar from './components/Sidebar'
+import Editor from './components/Editor'
+import Preview from './components/Preview'
+import SearchModal from './components/SearchModal'
+import WelcomeScreen from './components/WelcomeScreen'
+
+export default function App(): JSX.Element {
+  const { init, currentNote, viewMode, searchOpen, openSearch, saveNote } = useNotesStore()
+
+  useEffect(() => {
+    init()
+  }, [init])
+
+  // Global keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if (e.metaKey && e.key === 'k') {
+        e.preventDefault()
+        openSearch()
+      }
+      if (e.metaKey && e.key === 's') {
+        e.preventDefault()
+        saveNote()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return () => window.removeEventListener('keydown', handler)
+  }, [openSearch, saveNote])
+
+  return (
+    <div className="flex h-screen w-screen overflow-hidden" style={{ background: 'var(--bg-0)' }}>
+      {/* Sidebar */}
+      <Sidebar />
+
+      {/* Divider */}
+      <div
+        className="w-px flex-shrink-0"
+        style={{ background: 'var(--border)', opacity: 0.8 }}
+      />
+
+      {/* Main content */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {currentNote ? (
+          <>
+            {(viewMode === 'edit' || viewMode === 'split') && (
+              <div
+                className={`flex flex-col overflow-hidden ${
+                  viewMode === 'split' ? 'w-1/2 border-r' : 'flex-1'
+                }`}
+                style={viewMode === 'split' ? { borderColor: 'var(--border)' } : {}}
+              >
+                <Editor />
+              </div>
+            )}
+            {(viewMode === 'preview' || viewMode === 'split') && (
+              <div className={`flex flex-col overflow-hidden ${viewMode === 'split' ? 'w-1/2' : 'flex-1'}`}>
+                <Preview />
+              </div>
+            )}
+          </>
+        ) : (
+          <WelcomeScreen />
+        )}
+      </div>
+
+      {/* Search modal */}
+      <AnimatePresence>
+        {searchOpen && <SearchModal />}
+      </AnimatePresence>
+    </div>
+  )
+}
