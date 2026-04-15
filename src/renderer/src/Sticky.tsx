@@ -74,6 +74,18 @@ export default function Sticky(): JSX.Element {
     }
   }, [init])
 
+  // Sync when main app saves this note
+  useEffect(() => {
+    const handler = (incoming: unknown): void => {
+      // Only update if we're not actively typing (saveTimer is idle)
+      if (!saveTimer.current) {
+        setContent(incoming as string)
+      }
+    }
+    window.electron?.ipcRenderer.on('note:content-updated', handler)
+    return () => window.electron?.ipcRenderer.off('note:content-updated', handler)
+  }, [])
+
   const saveContent = useCallback(
     (value: string) => {
       if (!init) return

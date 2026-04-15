@@ -273,6 +273,12 @@ function registerIpcHandlers(): void {
   ipcMain.handle('notes:write', (_e, filePath: string, content: string) => {
     ensureDir(path.dirname(filePath))
     fs.writeFileSync(filePath, content, 'utf-8')
+    // Push update to any open sticky for this note
+    for (const { win, meta } of stickyWindows.values()) {
+      if (meta.notePath === filePath) {
+        win.webContents.send('note:content-updated', content)
+      }
+    }
     return true
   })
 
@@ -374,6 +380,8 @@ function registerIpcHandlers(): void {
     try {
       ensureDir(path.dirname(notePath))
       fs.writeFileSync(notePath, content, 'utf-8')
+      // Push update to main window so its editor stays in sync
+      mainWindow?.webContents.send('note:file-updated', notePath, content)
       return true
     } catch { return false }
   })

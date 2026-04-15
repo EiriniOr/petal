@@ -21,7 +21,7 @@ import SearchModal from './components/SearchModal'
 import WelcomeScreen from './components/WelcomeScreen'
 
 export default function App(): JSX.Element {
-  const { init, currentNote, viewMode, searchOpen, openSearch, saveNote, createNote } = useNotesStore()
+  const { init, currentNote, viewMode, searchOpen, openSearch, saveNote, createNote, syncFromSticky } = useNotesStore()
 
   useEffect(() => {
     init()
@@ -33,6 +33,15 @@ export default function App(): JSX.Element {
     window.electron?.ipcRenderer.on('menu:new-note', handler)
     return () => window.electron?.ipcRenderer.off('menu:new-note', handler)
   }, [createNote])
+
+  // Sync when a sticky saves its content
+  useEffect(() => {
+    const handler = (notePath: unknown, content: unknown): void => {
+      syncFromSticky(notePath as string, content as string)
+    }
+    window.electron?.ipcRenderer.on('note:file-updated', handler)
+    return () => window.electron?.ipcRenderer.off('note:file-updated', handler)
+  }, [syncFromSticky])
 
   // Global keyboard shortcuts
   useEffect(() => {

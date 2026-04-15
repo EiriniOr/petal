@@ -25,6 +25,7 @@ interface NotesState {
   deleteNote: (note: NoteMetadata) => Promise<void>
   renameNote: (note: NoteMetadata, newTitle: string) => Promise<void>
   setContent: (content: string) => void
+  syncFromSticky: (notePath: string, content: string) => void
   setViewMode: (mode: ViewMode) => void
   setSelectedFolder: (folder: string | null) => void
   openSearch: () => void
@@ -118,6 +119,17 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   },
 
   setContent: (content: string) => set({ currentContent: content }),
+
+  // Called when a sticky saves — only sync if it's the currently open note
+  // and the editor isn't mid-edit (not dirty), to avoid overwriting unsaved work
+  syncFromSticky: (notePath: string, content: string) => {
+    const { currentNote, currentContent, savedContent } = get()
+    if (!currentNote || currentNote.path !== notePath) return
+    // Only update if editor is clean (not dirty) to avoid clobbering unsaved edits
+    if (currentContent === savedContent) {
+      set({ currentContent: content, savedContent: content })
+    }
+  },
 
   setViewMode: (mode: ViewMode) => set({ viewMode: mode }),
 
