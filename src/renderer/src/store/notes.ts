@@ -33,6 +33,7 @@ interface NotesState {
   setSearchQuery: (q: string) => Promise<void>
   refresh: () => Promise<void>
   createFolder: (name: string) => Promise<void>
+  importNotes: (destFolder?: string) => Promise<number>
 }
 
 export const useNotesStore = create<NotesState>((set, get) => ({
@@ -152,5 +153,11 @@ export const useNotesStore = create<NotesState>((set, get) => ({
   createFolder: async (name: string) => {
     await window.api.createFolder(name)
     await get().refresh()
+  },
+
+  importNotes: async (destFolder?: string) => {
+    const imported = await window.api.importNotes(destFolder)
+    if (imported.length) await get().refresh()
+    return imported.length
   }
 }))

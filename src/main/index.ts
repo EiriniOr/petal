@@ -312,6 +312,31 @@ function registerIpcHandlers(): void {
     })
   })
 
+  ipcMain.handle('notes:import', async (_e, destFolder?: string) => {
+    const result = await dialog.showOpenDialog({
+      title: 'Import notes',
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'Markdown', extensions: ['md', 'txt'] }]
+    })
+    if (result.canceled || !result.filePaths.length) return []
+    const dest = destFolder ? path.join(DEFAULT_NOTES_DIR, destFolder) : DEFAULT_NOTES_DIR
+    ensureDir(dest)
+    const imported: string[] = []
+    for (const src of result.filePaths) {
+      const name = path.basename(src)
+      let target = path.join(dest, name)
+      // Avoid overwriting — append (2), (3) etc.
+      let n = 2
+      while (fs.existsSync(target)) {
+        target = path.join(dest, `${path.basename(name, '.md')} (${n}).md`)
+        n++
+      }
+      fs.copyFileSync(src, target)
+      imported.push(target)
+    }
+    return imported
+  })
+
   ipcMain.handle('dialog:save', async (_e, defaultName: string) => {
     const result = await dialog.showSaveDialog({
       defaultPath: path.join(app.getPath('desktop'), defaultName),
