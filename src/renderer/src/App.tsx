@@ -14,6 +14,7 @@ declare global {
   }
 }
 import Sidebar from './components/Sidebar'
+import Toolbar from './components/Toolbar'
 import Editor from './components/Editor'
 import Preview from './components/Preview'
 import SearchModal from './components/SearchModal'
@@ -61,9 +62,10 @@ export default function App(): JSX.Element {
       />
 
       {/* Main content */}
-      <div className="flex flex-1 overflow-hidden relative">
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {currentNote && <Toolbar />}
         {currentNote ? (
-          <>
+          <div className="flex flex-1 overflow-hidden relative">
             {(viewMode === 'edit' || viewMode === 'split') && (
               <div
                 className={`flex flex-col overflow-hidden ${
@@ -79,7 +81,7 @@ export default function App(): JSX.Element {
                 <Preview />
               </div>
             )}
-          </>
+          </div>
         ) : (
           <WelcomeScreen />
         )}

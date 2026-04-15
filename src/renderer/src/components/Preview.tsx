@@ -10,15 +10,6 @@ export default function Preview(): JSX.Element {
       className="flex flex-col h-full overflow-hidden"
       style={{ background: viewMode === 'split' ? 'var(--bg-0)' : 'var(--bg-1)' }}
     >
-      {/* Header (only in preview-only mode) */}
-      {viewMode === 'preview' && (
-        <div
-          className="flex items-center px-4 titlebar-drag flex-shrink-0"
-          style={{ height: 44, borderBottom: '1px solid var(--border)' }}
-        />
-      )}
-
-      {/* Split-mode subtle header */}
       {viewMode === 'split' && (
         <div
           className="flex items-center px-4 flex-shrink-0"
