@@ -1,6 +1,18 @@
 import { useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { useNotesStore } from './store/notes'
+
+// Extend window for Electron IPC listener
+declare global {
+  interface Window {
+    electron?: {
+      ipcRenderer: {
+        on: (channel: string, listener: () => void) => void
+        off: (channel: string, listener: () => void) => void
+      }
+    }
+  }
+}
 import Sidebar from './components/Sidebar'
 import Editor from './components/Editor'
 import Preview from './components/Preview'
@@ -8,11 +20,18 @@ import SearchModal from './components/SearchModal'
 import WelcomeScreen from './components/WelcomeScreen'
 
 export default function App(): JSX.Element {
-  const { init, currentNote, viewMode, searchOpen, openSearch, saveNote } = useNotesStore()
+  const { init, currentNote, viewMode, searchOpen, openSearch, saveNote, createNote } = useNotesStore()
 
   useEffect(() => {
     init()
   }, [init])
+
+  // Listen for tray menu "New Note"
+  useEffect(() => {
+    const handler = (): void => { createNote() }
+    window.electron?.ipcRenderer.on('menu:new-note', handler)
+    return () => window.electron?.ipcRenderer.off('menu:new-note', handler)
+  }, [createNote])
 
   // Global keyboard shortcuts
   useEffect(() => {

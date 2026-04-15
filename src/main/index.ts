@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import * as fs from 'fs'
@@ -7,14 +7,80 @@ import * as path from 'path'
 // Default notes directory
 const DEFAULT_NOTES_DIR = path.join(app.getPath('documents'), 'Petal Notes')
 
+let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
+
 function ensureDir(dir: string): void {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true })
   }
 }
 
+function getTrayIconPath(): string {
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'trayIconTemplate.png')
+  }
+  return path.join(__dirname, '../../resources/trayIconTemplate.png')
+}
+
+function createTray(): void {
+  const iconPath = getTrayIconPath()
+  const icon = nativeImage.createFromPath(iconPath)
+  icon.setTemplateImage(true) // auto invert for dark/light menu bar
+
+  tray = new Tray(icon)
+  tray.setToolTip('Petal')
+
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'Open Petal',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show()
+          mainWindow.focus()
+          app.dock.show()
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'New Note',
+      accelerator: 'Cmd+N',
+      click: () => {
+        if (mainWindow) {
+          mainWindow.show()
+          mainWindow.focus()
+          mainWindow.webContents.send('menu:new-note')
+        }
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit Petal',
+      accelerator: 'Cmd+Q',
+      click: () => app.quit()
+    }
+  ])
+
+  tray.setContextMenu(menu)
+
+  // Left-click shows the window
+  tray.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.hide()
+        app.dock.hide()
+      } else {
+        mainWindow.show()
+        mainWindow.focus()
+        app.dock.show()
+      }
+    }
+  })
+}
+
 function createWindow(): void {
-  const win = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
     minWidth: 800,
@@ -30,24 +96,41 @@ function createWindow(): void {
     }
   })
 
-  win.on('ready-to-show', () => {
-    win.show()
+  mainWindow.on('ready-to-show', () => {
+    mainWindow!.show()
   })
 
-  win.webContents.setWindowOpenHandler((details) => {
+  // Close button minimizes to tray rather than quitting
+  mainWindow.on('close', (e) => {
+    if (!app.isQuitting) {
+      e.preventDefault()
+      mainWindow!.hide()
+      app.dock.hide()
+    }
+  })
+
+  mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
   })
 
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    win.loadURL(process.env['ELECTRON_RENDERER_URL'])
+    mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    win.loadFile(join(__dirname, '../renderer/index.html'))
+    mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 }
 
+// Extend App type for quit flag
+declare module 'electron' {
+  interface App {
+    isQuitting: boolean
+  }
+}
+app.isQuitting = false
+
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.petal')
+  electronApp.setAppUserModelId('com.petal.app')
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -56,10 +139,19 @@ app.whenReady().then(() => {
   ensureDir(DEFAULT_NOTES_DIR)
   registerIpcHandlers()
   createWindow()
+  createTray()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+    if (mainWindow) {
+      mainWindow.show()
+      mainWindow.focus()
+      app.dock.show()
+    }
   })
+})
+
+app.on('before-quit', () => {
+  app.isQuitting = true
 })
 
 app.on('window-all-closed', () => {
@@ -69,15 +161,12 @@ app.on('window-all-closed', () => {
 // ─── IPC Handlers ────────────────────────────────────────────────────────────
 
 function registerIpcHandlers(): void {
-  // Get the notes directory path
   ipcMain.handle('notes:get-dir', () => DEFAULT_NOTES_DIR)
 
-  // List all notes (recursively, with metadata)
   ipcMain.handle('notes:list', async () => {
     return listNotesRecursive(DEFAULT_NOTES_DIR, DEFAULT_NOTES_DIR)
   })
 
-  // Read a single note
   ipcMain.handle('notes:read', async (_event, filePath: string) => {
     try {
       return fs.readFileSync(filePath, 'utf-8')
@@ -86,14 +175,12 @@ function registerIpcHandlers(): void {
     }
   })
 
-  // Write/save a note
   ipcMain.handle('notes:write', async (_event, filePath: string, content: string) => {
     ensureDir(path.dirname(filePath))
     fs.writeFileSync(filePath, content, 'utf-8')
     return true
   })
 
-  // Delete a note
   ipcMain.handle('notes:delete', async (_event, filePath: string) => {
     try {
       fs.unlinkSync(filePath)
@@ -103,7 +190,6 @@ function registerIpcHandlers(): void {
     }
   })
 
-  // Rename a note
   ipcMain.handle('notes:rename', async (_event, oldPath: string, newPath: string) => {
     try {
       ensureDir(path.dirname(newPath))
@@ -114,24 +200,20 @@ function registerIpcHandlers(): void {
     }
   })
 
-  // List folders
   ipcMain.handle('folders:list', async () => {
     return listFolders(DEFAULT_NOTES_DIR)
   })
 
-  // Create folder
   ipcMain.handle('folders:create', async (_event, name: string) => {
     const folderPath = path.join(DEFAULT_NOTES_DIR, name)
     ensureDir(folderPath)
     return folderPath
   })
 
-  // Open notes directory in Finder
   ipcMain.handle('notes:open-dir', async () => {
     shell.openPath(DEFAULT_NOTES_DIR)
   })
 
-  // Full-text search (simple grep-style)
   ipcMain.handle('notes:search', async (_event, query: string) => {
     if (!query.trim()) return []
     const notes = listNotesRecursive(DEFAULT_NOTES_DIR, DEFAULT_NOTES_DIR)
@@ -146,7 +228,6 @@ function registerIpcHandlers(): void {
     })
   })
 
-  // Show save dialog (for exporting)
   ipcMain.handle('dialog:save', async (_event, defaultName: string) => {
     const result = await dialog.showSaveDialog({
       defaultPath: path.join(app.getPath('desktop'), defaultName),
@@ -155,6 +236,8 @@ function registerIpcHandlers(): void {
     return result.filePath
   })
 }
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 interface NoteMetadata {
   id: string
@@ -184,7 +267,6 @@ function listNotesRecursive(dir: string, baseDir: string): NoteMetadata[] {
       let tags: string[] = []
       try {
         const content = fs.readFileSync(fullPath, 'utf-8')
-        // Extract tags from front matter or #hashtags
         const tagMatch = content.match(/^tags:\s*\[([^\]]+)\]/m)
         if (tagMatch) {
           tags = tagMatch[1].split(',').map((t) => t.trim().replace(/['"]/g, ''))
@@ -203,10 +285,9 @@ function listNotesRecursive(dir: string, baseDir: string): NoteMetadata[] {
         // ignore
       }
 
-      const title = entry.name.replace(/\.md$/, '')
       notes.push({
         id: relativePath,
-        title,
+        title: entry.name.replace(/\.md$/, ''),
         path: fullPath,
         folder,
         modified: stat.mtimeMs,
@@ -227,8 +308,7 @@ function listFolders(baseDir: string): { name: string; path: string; count: numb
   for (const entry of entries) {
     if (entry.isDirectory() && !entry.name.startsWith('.')) {
       const folderPath = path.join(baseDir, entry.name)
-      const count = countMarkdownFiles(folderPath)
-      folders.push({ name: entry.name, path: folderPath, count })
+      folders.push({ name: entry.name, path: folderPath, count: countMarkdownFiles(folderPath) })
     }
   }
   return folders
