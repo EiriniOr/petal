@@ -8,11 +8,11 @@ import {
   FileText,
   ChevronDown,
   ChevronRight,
-  MoreHorizontal,
   Trash2,
   Edit3,
   FolderPlus,
-  ExternalLink
+  ExternalLink,
+  PinIcon
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useNotesStore } from '../store/notes'
@@ -337,6 +337,14 @@ export default function Sidebar(): JSX.Element {
               icon={<Edit3 size={13} />}
               label="Rename"
               onClick={() => startRename(contextMenu.note)}
+            />
+            <ContextMenuItem
+              icon={<PinIcon size={13} />}
+              label="Pin to Desktop"
+              onClick={() => {
+                window.api.openSticky(contextMenu.note.id, contextMenu.note.path)
+                setContextMenu(null)
+              }}
             />
             <div style={{ height: 1, background: 'var(--border)', margin: '4px 8px' }} />
             <ContextMenuItem
