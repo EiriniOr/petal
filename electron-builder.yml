@@ -2,23 +2,28 @@ appId: com.petal.app
 productName: Petal
 copyright: Copyright © 2025
 directories:
-  buildResources: resources
+  buildResources: build
   output: dist
+extraResources:
+  - from: resources/trayIconTemplate.png
+    to: trayIconTemplate.png
+  - from: resources/trayIconTemplate@2x.png
+    to: trayIconTemplate@2x.png
 files:
   - '!**/.vscode/*'
   - '!src/*'
   - '!electron.vite.config.*'
-  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
+  - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,CHANGELOG.md}'
   - '!{.env,.env.*,.npmrc,pnpm-lock.yaml}'
-afterSign: ''
 mac:
-  entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    NSMicrophoneUsageDescription: ''
-    NSCameraUsageDescription: ''
-  notarize: false
+  icon: build/icon.png
   target:
     - target: dmg
       arch: arm64
-    - target: zip
-      arch: arm64
+  extendInfo:
+    LSUIElement: false
+dmg:
+  title: Petal
+  window:
+    width: 540
+    height: 380

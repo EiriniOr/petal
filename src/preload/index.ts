@@ -36,7 +36,19 @@ export interface FolderInfo {
   count: number
 }
 
+const electron = {
+  ipcRenderer: {
+    on: (channel: string, listener: (...args: unknown[]) => void): void => {
+      ipcRenderer.on(channel, (_event, ...args) => listener(...args))
+    },
+    off: (channel: string, listener: (...args: unknown[]) => void): void => {
+      ipcRenderer.removeListener(channel, listener)
+    }
+  }
+}
+
 contextBridge.exposeInMainWorld('api', api)
+contextBridge.exposeInMainWorld('electron', electron)
 
 declare global {
   interface Window {
