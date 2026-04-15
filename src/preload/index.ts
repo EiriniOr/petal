@@ -19,6 +19,8 @@ const api = {
   openNotesDir: (): Promise<void> => ipcRenderer.invoke('notes:open-dir'),
   showSaveDialog: (defaultName: string): Promise<string | undefined> =>
     ipcRenderer.invoke('dialog:save', defaultName),
+  importNotes: (destFolder?: string): Promise<string[]> =>
+    ipcRenderer.invoke('notes:import', destFolder),
   // Stickies
   openSticky: (noteId: string, notePath: string): Promise<void> =>
     ipcRenderer.invoke('sticky:open', noteId, notePath),

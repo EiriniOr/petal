@@ -12,7 +12,8 @@ import {
   Edit3,
   FolderPlus,
   ExternalLink,
-  PinIcon
+  PinIcon,
+  Upload
 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useNotesStore } from '../store/notes'
@@ -30,7 +31,8 @@ export default function Sidebar(): JSX.Element {
     setSelectedFolder,
     openSearch,
     createFolder,
-    renameNote
+    renameNote,
+    importNotes
   } = useNotesStore()
 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set())
@@ -312,6 +314,16 @@ export default function Sidebar(): JSX.Element {
         >
           <ExternalLink size={11} />
           Open in Finder
+        </button>
+
+        <button
+          onClick={() => importNotes(selectedFolder || undefined)}
+          className="flex items-center gap-1.5 text-xs transition-opacity hover:opacity-80 ml-auto"
+          style={{ color: 'var(--text-3)' }}
+          title="Import .md files into notes"
+        >
+          <Upload size={11} />
+          Import
         </button>
       </div>
 

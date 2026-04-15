@@ -16,6 +16,7 @@ declare global {
       createFolder: (name: string) => Promise<string>
       openNotesDir: () => Promise<void>
       showSaveDialog: (defaultName: string) => Promise<string | undefined>
+      importNotes: (destFolder?: string) => Promise<string[]>
       openSticky: (noteId: string, notePath: string) => Promise<void>
       listStickies: () => Promise<string[]>
     }
