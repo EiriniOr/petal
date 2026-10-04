@@ -1,5 +1,7 @@
 # Petal
 
+> 📁 Part of my portfolio: [see this project and more →](https://eirini-portfolio-aer3.vercel.app/?utm_source=github&utm_medium=readme&utm_campaign=petal#story/petal)
+
 A beautiful local markdown notes app for macOS. Notes are stored as plain `.md` files on disk — no cloud, no accounts.
 
 ![Electron](https://img.shields.io/badge/Electron-33-47848F?logo=electron) ![React](https://img.shields.io/badge/React-18-61DAFB?logo=react) ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)
